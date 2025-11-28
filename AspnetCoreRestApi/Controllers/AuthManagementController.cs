@@ -268,8 +268,8 @@ namespace AspnetCoreRestApi.Controllers
 
         private async Task<AuthResult> GenerateJwtToken(IdentityUser user)
         {
-           var jwtTokenHandler = new JwtSecurityTokenHandler();
-           var key = System.Text.Encoding.ASCII.GetBytes(_jwtConfig.Secret);
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+            var key = System.Text.Encoding.ASCII.GetBytes(_jwtConfig.Secret);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]

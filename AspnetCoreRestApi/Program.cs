@@ -2,6 +2,8 @@ using AspnetCoreRestApi.Configurations;
 using AspnetCoreRestApi.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +34,15 @@ var tokenValidationParms = new TokenValidationParameters
 };
 
 builder.Services.AddSingleton(tokenValidationParms);
+
+builder.Services.AddApiVersioning(opt =>
+{
+    opt.AssumeDefaultVersionWhenUnspecified = true;
+    opt.DefaultApiVersion = ApiVersion.Default;
+    opt.ReportApiVersions = true;
+
+    opt.ApiVersionReader = new HeaderApiVersionReader("api-version");
+});
 
 builder.Services.AddAuthentication(options =>
 {
