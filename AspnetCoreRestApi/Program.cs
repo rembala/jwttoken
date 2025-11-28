@@ -1,4 +1,5 @@
 using AspnetCoreRestApi.Configurations;
+using AspnetCoreRestApi.Core.IConfiguration;
 using AspnetCoreRestApi.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -43,6 +44,8 @@ builder.Services.AddApiVersioning(opt =>
 
     opt.ApiVersionReader = new HeaderApiVersionReader("api-version");
 });
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddAuthentication(options =>
 {
