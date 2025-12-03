@@ -1,6 +1,7 @@
 using AspnetCoreRestApi.Configurations;
 using AspnetCoreRestApi.Core.IConfiguration;
 using AspnetCoreRestApi.Data;
+using AspnetCoreRestApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +48,8 @@ builder.Services.AddApiVersioning(opt =>
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+builder.Services.AddCorrelationIdManager();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -59,7 +62,7 @@ builder.Services.AddAuthentication(options =>
     jwt.TokenValidationParameters = tokenValidationParms;
 });
 
-builder.Services.AddIdentityCore<IdentityUser> (options =>
+builder.Services.AddIdentity<IdentityUser, IdentityRole> (options =>
 {
     options.SignIn.RequireConfirmedAccount = true;    
 }).AddEntityFrameworkStores<ApiDbContext>();
@@ -75,6 +78,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCorrelationIdMiddleware();
 
 app.UseAuthorization();
 

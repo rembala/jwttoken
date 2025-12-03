@@ -3,8 +3,6 @@ using AspnetCoreRestApi.Data;
 using AspnetCoreRestApi.DTOs.Requests;
 using AspnetCoreRestApi.DTOs.Responses;
 using AspnetCoreRestApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,16 +25,24 @@ namespace AspnetCoreRestApi.Controllers
 
         private readonly ApiDbContext _context;
 
+        private readonly RoleManager<IdentityRole> _roleManager;
+
+        private readonly ILogger<AuthManagementController> _logger;
+
         public AuthManagementController(
             UserManager<IdentityUser> userManager,
             IOptionsMonitor<JwtConfig> jwtConfig, 
             TokenValidationParameters tokenValidationParameters,
-            ApiDbContext apiDbContext)
+            ApiDbContext apiDbContext,
+            RoleManager<IdentityRole> roleManager,
+            ILogger<AuthManagementController> logger)
         {
             _userManager = userManager;
             _jwtConfig = jwtConfig.CurrentValue;
             _tokenValidationParameters = tokenValidationParameters;
             _context = apiDbContext;
+            _roleManager = roleManager;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -65,6 +71,7 @@ namespace AspnetCoreRestApi.Controllers
                 var isCreated = await _userManager.CreateAsync(newUser, user.Password);
                 if (isCreated.Succeeded)
                 {
+                    var resultRoleAssign = await _userManager.AddToRoleAsync(newUser, "appUser");
                     var jwtToken = await GenerateJwtToken(newUser);
 
                     return Ok(jwtToken);
@@ -270,15 +277,10 @@ namespace AspnetCoreRestApi.Controllers
         {
             var jwtTokenHandler = new JwtSecurityTokenHandler();
             var key = System.Text.Encoding.ASCII.GetBytes(_jwtConfig.Secret);
+            var claims = await GetClaimsAsync(user);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                   new Claim("Id", user.Id),
-                   new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                   new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-                   new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-               }),
+                Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddSeconds(30),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key),
@@ -309,6 +311,40 @@ namespace AspnetCoreRestApi.Controllers
                 Success = true,
                 RefreshToken = refreshToken.Token
             };
+        }
+
+        private async Task<List<Claim>> GetClaimsAsync(IdentityUser user)
+        {
+           var options = new IdentityOptions();
+
+           var claims = new List<Claim>
+           {
+                new Claim("Id", user.Id),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+           };
+           var userClaims = await _userManager.GetClaimsAsync(user);
+
+           claims.AddRange(userClaims);
+
+           var userRoles = await _userManager.GetRolesAsync(user);
+              foreach (var userRole in userRoles)
+              {
+                var role = await _roleManager.FindByNameAsync(userRole);
+
+                if (role != null)
+                {
+                    claims.Add(new Claim(options.ClaimsIdentity.RoleClaimType, userRole));
+                    var roleClaims = await _roleManager.GetClaimsAsync(role);
+                     foreach (var roleClaim in roleClaims)
+                     {
+                          claims.Add(roleClaim);
+                     }
+                }
+            }
+
+            return claims;
         }
 
         private string RandomString(int length)

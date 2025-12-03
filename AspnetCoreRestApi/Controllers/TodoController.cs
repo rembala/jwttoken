@@ -1,4 +1,6 @@
-﻿using AspnetCoreRestApi.Data;
+﻿using AspnetCoreRestApi.Configurations;
+using AspnetCoreRestApi.Configurations.Interfaces;
+using AspnetCoreRestApi.Data;
 using AspnetCoreRestApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -10,19 +12,27 @@ namespace AspnetCoreRestApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "appUser")]
     public class TodoController : ControllerBase
     {
         private readonly ApiDbContext _apidDbContext;
 
-        public TodoController(ApiDbContext apiDbContext)
+        private readonly ICorellationIdGenerator _corellationIdGenerator;
+        private readonly ILogger<TodoController> _todoController;
+
+        public TodoController(ApiDbContext apiDbContext,
+            ICorellationIdGenerator corellationIdGenerator,
+            ILogger<TodoController> todoController)
         {
             _apidDbContext = apiDbContext;
+            _corellationIdGenerator = corellationIdGenerator;
+            _todoController = todoController;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetItems()
         {
+            _todoController.LogInformation("Getting all todo items. Correlation ID: {CorrelationId}", _corellationIdGenerator.Get());
             var items = await _apidDbContext.Items.ToListAsync();
 
             return Ok(items);
