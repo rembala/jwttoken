@@ -1,7 +1,11 @@
 using AspnetCoreRestApi.Configurations;
 using AspnetCoreRestApi.Core.IConfiguration;
 using AspnetCoreRestApi.Data;
+using AspnetCoreRestApi.Helpers;
+using AspnetCoreRestApi.Helpers.Interfaces;
 using AspnetCoreRestApi.Services;
+using Hangfire;
+using Hangfire.Storage.SQLite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -69,6 +73,19 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole> (options =>
 
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
 
+var hangfireConnectionString = builder.Configuration.GetConnectionString("HangfireConnection");
+builder.Services.AddHangfire(config => config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+.UseSimpleAssemblyNameTypeSerializer()
+.UseRecommendedSerializerSettings()
+.UseSQLiteStorage(hangfireConnectionString));
+
+// Hangfire server
+builder.Services.AddHangfireServer();
+
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IMerchService, MerchService>();
+builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -78,6 +95,19 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseHangfireDashboard();
+
+app.UseHangfireDashboard("/hangfire");
+
+app.MapHangfireDashboard("/hangfire");
+
+RecurringJob.AddOrUpdate(
+    "print-hello",
+    () => Console.WriteLine("Hello from Hangfire"),
+    Cron.Minutely(),
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Local }
+);
 
 app.UseCorrelationIdMiddleware();
 

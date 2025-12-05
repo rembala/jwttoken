@@ -1,7 +1,9 @@
 ﻿using AspnetCoreRestApi.Configurations;
 using AspnetCoreRestApi.Configurations.Interfaces;
 using AspnetCoreRestApi.Data;
+using AspnetCoreRestApi.Helpers.Interfaces;
 using AspnetCoreRestApi.Models;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +36,9 @@ namespace AspnetCoreRestApi.Controllers
         {
             _todoController.LogInformation("Getting all todo items. Correlation ID: {CorrelationId}", _corellationIdGenerator.Get());
             var items = await _apidDbContext.Items.ToListAsync();
-
+            var jobId = BackgroundJob.Enqueue<IEmailService>(emailService => emailService.SendWelcomeEmail("maslovskij.artur@gmail.com", "Artur"));
+            Console.WriteLine($"Hangfire Job ID: {jobId}");
+            
             return Ok(items);
         }
 
