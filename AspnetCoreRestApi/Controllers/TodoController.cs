@@ -3,12 +3,13 @@ using AspnetCoreRestApi.Configurations.Interfaces;
 using AspnetCoreRestApi.Data;
 using AspnetCoreRestApi.Helpers.Interfaces;
 using AspnetCoreRestApi.Models;
+using AspnetCoreRestApi.Services.Interfaces;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AspnetCoreRestApi.Controllers
 {
@@ -21,14 +22,17 @@ namespace AspnetCoreRestApi.Controllers
 
         private readonly ICorellationIdGenerator _corellationIdGenerator;
         private readonly ILogger<TodoController> _todoController;
+        private readonly ITodoNotificationPublisherService _todoNotificationPublisherService;
 
         public TodoController(ApiDbContext apiDbContext,
             ICorellationIdGenerator corellationIdGenerator,
-            ILogger<TodoController> todoController)
+            ILogger<TodoController> todoController,
+            ITodoNotificationPublisherService todoNotificationPublisherService)
         {
             _apidDbContext = apiDbContext;
             _corellationIdGenerator = corellationIdGenerator;
             _todoController = todoController;
+            _todoNotificationPublisherService = todoNotificationPublisherService;
         }
 
         [HttpGet]
@@ -54,6 +58,22 @@ namespace AspnetCoreRestApi.Controllers
             }
 
             return new JsonResult("something went wrong");
+        }
+
+        [HttpPost("SendTransitITem")]
+        public async Task<IActionResult> SendTransitITem(ItemData data)
+        {
+            if (ModelState.IsValid)
+            {
+                await SendMassTransitItem(data);
+            }
+
+            return new JsonResult("something went wrong");
+        }
+
+        private async Task SendMassTransitItem(ItemData data)
+        {
+            await _todoNotificationPublisherService.SendNotification(data.Id, data.Title);
         }
 
         [HttpGet("{id}")]

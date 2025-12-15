@@ -4,8 +4,10 @@ using AspnetCoreRestApi.Data;
 using AspnetCoreRestApi.Helpers;
 using AspnetCoreRestApi.Helpers.Interfaces;
 using AspnetCoreRestApi.Services;
+using AspnetCoreRestApi.Services.Interfaces;
 using Hangfire;
 using Hangfire.Storage.SQLite;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -53,6 +55,20 @@ builder.Services.AddApiVersioning(opt =>
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddCorrelationIdManager();
+
+builder.Services.AddScoped<ITodoNotificationPublisherService, TodoNotificationPublisherService>();
+
+builder.Services.AddMassTransit(config =>
+{
+    config.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMqConfig:Host"], h =>
+        {
+            h.Username(builder.Configuration["RabbitMqConfig:Username"]);
+            h.Password(builder.Configuration["RabbitMqConfig:Password"]);
+        });
+    });
+});
 
 builder.Services.AddAuthentication(options =>
 {
