@@ -14,6 +14,7 @@ namespace AspnetCoreRestApi.Controllers
             _MemoryCache = memoryCache;
         }
 
+
         [HttpGet("/")]
         public IActionResult Index()
         {
