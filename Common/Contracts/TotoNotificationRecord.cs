@@ -15,5 +15,5 @@ namespace Common.Contracts
             Title = title;
         }
     }
-
 }
+

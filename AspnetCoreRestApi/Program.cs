@@ -3,6 +3,7 @@ using AspnetCoreRestApi.Core.IConfiguration;
 using AspnetCoreRestApi.Data;
 using AspnetCoreRestApi.Helpers;
 using AspnetCoreRestApi.Helpers.Interfaces;
+using AspnetCoreRestApi.Models.MessageBroker;
 using AspnetCoreRestApi.Services;
 using AspnetCoreRestApi.Services.Interfaces;
 using Hangfire;
@@ -25,6 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<ApiDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -58,14 +60,19 @@ builder.Services.AddCorrelationIdManager();
 
 builder.Services.AddScoped<ITodoNotificationPublisherService, TodoNotificationPublisherService>();
 
+// This is usually done automatically by WebApplication.CreateBuilder(args)
+var messageBrokerSettings = builder.Configuration
+    .GetSection("MessageBrokerSettings")
+    .Get<MessageBrokerSettings>();
+
 builder.Services.AddMassTransit(config =>
 {
     config.UsingRabbitMq((ctx, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMqConfig:Host"], h =>
-        {
-            h.Username(builder.Configuration["RabbitMqConfig:Username"]);
-            h.Password(builder.Configuration["RabbitMqConfig:Password"]);
+        // Use the values we just loaded
+        cfg.Host(messageBrokerSettings.Host, "/", h => {
+            h.Username(messageBrokerSettings.Username);
+            h.Password(messageBrokerSettings.Password);
         });
     });
 });
@@ -130,5 +137,17 @@ app.UseCorrelationIdMiddleware();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}");
+});
+
+
+app.UseResponseCaching();
 
 app.Run();

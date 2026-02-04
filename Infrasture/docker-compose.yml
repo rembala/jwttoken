@@ -1,0 +1,29 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: artur
+      RABBITMQ_DEFAULT_PASS: rembakas
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  api:
+    build:
+      context: ..
+      dockerfile: Infrasture/setupproject.dockerfile
+    container_name: aspnetcore-api
+    ports:
+      - "8080:8080"
+    environment:
+      - MessageBrokerSettings__Host=rabbitmq
+      - MessageBrokerSettings__Username=artur
+      - MessageBrokerSettings__Password=rembakas
+    depends_on:
+      - rabbitmq
+
+volumes:
+  rabbitmq_data:
